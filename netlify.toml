@@ -1,0 +1,9 @@
+[build]
+  base = ""
+  publish = "Client"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/call"
+  to = "/.netlify/functions/call"
+  status = 200
