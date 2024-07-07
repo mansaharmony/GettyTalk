@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GettyTalk</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #1a1a1a;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    video {
+      width: 300px;
+      height: 200px;
+      background-color: black;
+      margin: 10px;
+    }
+    #controls {
+      display: flex;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px;
+      background-color: #04f489;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #03d078;
+    }
+    #chat {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #messages {
+      width: 80%;
+      max-width: 400px;
+      height: 100px;
+      overflow-y: auto;
+      border: 1px solid #555;
+      margin-bottom: 10px;
+      padding: 10px;
+      background-color: #333;
+    }
+    #messageInput {
+      width: 80%;
+      max-width: 400px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>GettyTalk</h1>
+  <p>Connect with your loved ones, seamlessly.</p>
+  <video id="localVideo" autoplay muted></video>
+  <video id="remoteVideo" autoplay></video>
+  <div id="controls">
+    <button onclick="startCall()">Start Call</button>
+    <button onclick="toggleAudio()">Mute/Unmute</button>
+    <button onclick="toggleVideo()">Enable/Disable Video</button>
+    <button onclick="startScreenShare()">Share Screen</button>
+  </div>
+  <div id="chat">
+    <div id="messages"></div>
+    <input id="messageInput" type="text" placeholder="Type a message...">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+  <script>
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const messageInput = document.getElementById('messageInput');
+    const messages = document.getElementById('messages');
+    let localStream;
+    let remoteStream;
+    let peerConnection;
+    const socket = io();
+
+    async function startCall() {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideo.srcObject = localStream;
+
+      const configuration = {
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      };
+      peerConnection = new RTCPeerConnection(configuration);
+
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+      peerConnection.ontrack = (event) => {
+        remoteStream = event.streams[0];
+        remoteVideo.srcObject = remoteStream;
+      };
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('ice-candidate', event.candidate);
+        }
+      };
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      socket.emit('offer', offer);
+    }
+
+    socket.on('offer', async (offer) => {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      socket.emit('answer', answer);
+    });
+
+    socket.on('answer', async (answer) => {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    socket.on('ice-candidate', async (candidate) => {
+      await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    });
+
+    function toggleAudio() {
+      const audioTracks = localStream.getAudioTracks();
+      audioTracks[0].enabled = !audioTracks[0].enabled;
+    }
+
+    function toggleVideo() {
+      const videoTracks = localStream.getVideoTracks();
+      videoTracks[0].enabled = !videoTracks[0].enabled;
+    }
+
+    async function startScreenShare() {
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const screenTrack = displayStream.getVideoTracks()[0];
+      const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+      sender.replaceTrack(screenTrack);
+
+      screenTrack.onended = () => {
+        sender.replaceTrack(localStream.getVideoTracks()[0]);
+      };
+    }
+
+    function sendMessage() {
+      const message = messageInput.value;
+      socket.emit('message', message);
+      messageInput.value = '';
+    }
+
+    socket.on('message', (message) => {
+      const messageElement = document.createElement('div');
+      messageElement.textContent = message;
+      messages.appendChild(messageElement);
+    });
+  </script>
+</body>
+</html>
