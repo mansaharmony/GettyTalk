@@ -4,93 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GettyTalk</title>
-  <style>
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background-color: #1a1a1a;
-      color: white;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    h1 {
-      margin-bottom: 10px;
-    }
-    p {
-      margin-bottom: 20px;
-    }
-    video {
-      width: 300px;
-      height: 200px;
-      background-color: black;
-      margin: 10px;
-    }
-    #controls {
-      display: flex;
-      justify-content: center;
-      margin-top: 10px;
-    }
-    button {
-      margin: 5px;
-      padding: 10px;
-      background-color: #04f489;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #03d078;
-    }
-    #chat {
-      margin-top: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    #messages {
-      width: 80%;
-      max-width: 400px;
-      height: 100px;
-      overflow-y: auto;
-      border: 1px solid #555;
-      margin-bottom: 10px;
-      padding: 10px;
-      background-color: #333;
-      color: white;
-      font-size: 14px;
-    }
-    #messageInput {
-      width: 80%;
-      max-width: 400px;
-      padding: 10px;
-      margin-bottom: 10px;
-      font-size: 14px;
-    }
-  </style>
 </head>
 <body>
-  <h1>GettyTalk</h1>
-  <p>Connect with your loved ones, seamlessly.</p>
-  <video id="localVideo" autoplay muted></video>
-  <video id="remoteVideo" autoplay></video>
-  <div id="controls">
-    <button onclick="startCall()">Start Call</button>
-    <button onclick="toggleAudio()">Mute/Unmute</button>
-    <button onclick="toggleVideo()">Enable/Disable Video</button>
-    <button onclick="startScreenShare()">Share Screen</button>
-  </div>
-  <div id="chat">
-    <div id="messages"></div>
-    <input id="messageInput" type="text" placeholder="Type a message...">
-    <button onclick="sendMessage()">Send</button>
-  </div>
+  <button id="call-button">Call</button>
 
   <script>
-    // JavaScript code will go here
+    document.getElementById('call-button').addEventListener('click', () => {
+      fetch('/.netlify/functions/call', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: 'Hello from the client!' })
+      })
+      .then(response => response.json())
+      .then(data => console.log(data))
+      .catch(error => console.error('Error:', error));
+    });
   </script>
 </body>
 </html>
